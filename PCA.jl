@@ -50,7 +50,7 @@ function hubersdiff(R)
     end
 end
 
-function PCA_gradient(X,k)
+function robustPCA(X,k)
     (n,d) = size(X)
 
     # Subtract mean
