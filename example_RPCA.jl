@@ -6,7 +6,7 @@ X = load("highway.jld","X")
 # Fit PCA model
 include("PCA.jl")
 k = 5
-model = PCA(X,k)
+model = PCA_gradient(X,k)
 
 Z = model.compress(X)
 Xhat = model.expand(Z)

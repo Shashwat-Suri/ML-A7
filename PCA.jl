@@ -20,6 +20,19 @@ function PCA(X,k)
     return CompressModel(compress,expand,W)
 end
 
+
+function RobustPCA(X,k)
+    (n,d) = size(X)
+    # Subtract mean
+    mu = mean(X,dims=1)
+    X -= repeat(mu,n,1)
+    (U,S,V) = svd(X)
+    W = V[:,1:k]'
+    compress(Xhat) = compressFunc(Xhat,W,mu)
+    expand(Z) = expandFunc(Z,W,mu)
+    return CompressModel(compress,expand,W)
+end
+
 function compressFunc(Xhat,W,mu)
     (t,d) = size(Xhat)
     Xcentered = Xhat - repeat(mu,t,1)
@@ -29,6 +42,14 @@ end
 function expandFunc(Z,W,mu)
     (t,k) = size(Z)
     return Z*W + repeat(mu,t,1)
+end
+function hubers(R)
+    ep =0.01
+    if(abs(R)<=ep)
+        return 0.5*(R^2)
+    else
+        return ep*(abs(R)-(0.5*ep))
+    end
 end
 
 function PCA_gradient(X,k)
@@ -43,7 +64,8 @@ function PCA_gradient(X,k)
     Z = randn(n,k)
 
     R = Z*W - X
-    f = sum(R.^2)
+    f = sum(hubers.(R))
+    @show f
     funObjZ(z) = pcaObjZ(z,X,W)
     funObjW(w) = pcaObjW(w,X,Z)
     for iter in 1:50
@@ -56,10 +78,10 @@ function PCA_gradient(X,k)
         W[:] = findMin(funObjW,W[:],verbose=false,maxIter=10)
 
         R = Z*W - X
-        f = sum(R.^2)
+        f = sum(hubers.(R))
         @printf("Iteration %d, loss = %f\n",iter,f/length(X))
 
-        if (fOld - f)/length(X) < 1e-2
+        if (fOld - f)/length(X) < 1e-10
             break
         end
     end
@@ -92,7 +114,7 @@ function pcaObjZ(z,X,W)
 
     # Comptue function value
     R = Z*W - X
-    f = (1/2)sum(R.^2)
+    f = (1/2)sum(hubers.(R))
 
     # Comptue derivative with respect to each residual
     dR = R
@@ -112,7 +134,7 @@ function pcaObjW(w,X,Z)
 
     # Comptue function value
     R = Z*W - X
-    f = (1/2)sum(R.^2)
+    f = (1/2)sum(hubers.(R))
 
     # Comptue derivative with respect to each residual
     dR = R
